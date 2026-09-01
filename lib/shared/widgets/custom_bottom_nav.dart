@@ -40,36 +40,31 @@ class CustomBottomNav extends StatelessWidget {
                     context: context,
                     index: 0,
                     label: 'Feed',
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home,
+                    iconPath: 'assets/images/nav/home.png',
                   ),
                   _buildNavItem(
                     context: context,
                     index: 1,
                     label: 'Search',
-                    icon: Icons.search,
-                    activeIcon: Icons.search,
+                    iconPath: 'assets/images/nav/search.png',
                   ),
                   _buildNavItem(
                     context: context,
                     index: 2,
                     label: 'List',
-                    icon: Icons.add_box_outlined,
-                    activeIcon: Icons.add_box,
+                    iconPath: 'assets/images/nav/list.png',
                   ),
                   _buildNavItem(
                     context: context,
                     index: 3,
                     label: 'Notification',
-                    icon: Icons.notifications_none_outlined,
-                    activeIcon: Icons.notifications,
+                    iconPath: 'assets/images/nav/notification.png',
                   ),
                   _buildNavItem(
                     context: context,
                     index: 4,
                     label: 'Profile',
-                    icon: Icons.person_outline,
-                    activeIcon: Icons.person,
+                    iconPath: 'assets/images/nav/profile.png',
                   ),
                 ],
               ),
@@ -95,8 +90,7 @@ class CustomBottomNav extends StatelessWidget {
     required BuildContext context,
     required int index,
     required String label,
-    required IconData icon,
-    required IconData activeIcon,
+    required String iconPath,
   }) {
     final isSelected = currentIndex == index;
     final itemColor = isSelected ? AppColors.navActiveGreen : AppColors.bodyText;
@@ -111,8 +105,8 @@ class CustomBottomNav extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              isSelected ? activeIcon : icon,
+            ImageIcon(
+              AssetImage(iconPath),
               size: 24,
               color: itemColor,
             ),
