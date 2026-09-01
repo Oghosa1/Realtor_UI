@@ -29,7 +29,7 @@ class CustomBottomNav extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: Padding(
-          padding: const EdgeInsets.only(top: 12, bottom: 8, left: 16, right: 16),
+          padding: const EdgeInsets.only(top: 16, bottom: 8, left: 20, right: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -69,7 +69,7 @@ class CustomBottomNav extends StatelessWidget {
                 ],
               ),
               if (bottomPadding == 0) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Container(
                   width: 134,
                   height: 5,
@@ -99,7 +99,7 @@ class CustomBottomNav extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => onTap(index),
       child: SizedBox(
-        width: 58,
+        width: 56.8,
         height: 52,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -110,12 +110,13 @@ class CustomBottomNav extends StatelessWidget {
               size: 24,
               color: itemColor,
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 11),
             Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: itemColor,
                     fontSize: 14,
+                    height: 1.2,
                     fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                   ),
               textAlign: TextAlign.center,
