@@ -56,11 +56,26 @@ class TagBadge extends StatelessWidget {
           color: foregroundColor,
         );
       case PropertyTag.lookingToRent:
-        return Icon(Icons.vpn_key_outlined, size: 12, color: foregroundColor);
+        return Image.asset(
+          'assets/images/key_icon.png',
+          width: 12,
+          height: 12,
+          color: foregroundColor,
+        );
       case PropertyTag.forRent:
-        return Icon(Icons.vpn_key_outlined, size: 12, color: foregroundColor);
+        return Image.asset(
+          'assets/images/for_rent.png',
+          width: 12,
+          height: 12,
+          color: foregroundColor,
+        );
       case PropertyTag.forSale:
-        return Icon(Icons.sell_outlined, size: 12, color: foregroundColor);
+        return Image.asset(
+          'assets/images/for_sale.png',
+          width: 12,
+          height: 12,
+          color: foregroundColor,
+        );
     }
   }
 
