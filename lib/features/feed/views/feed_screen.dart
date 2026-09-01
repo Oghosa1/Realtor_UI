@@ -8,14 +8,41 @@ import '../widgets/filter_button.dart';
 import '../widgets/post_card.dart';
 import '../widgets/stories_carousel.dart';
 
-/// Main Feed screen rendering the stories carousel, filters, post bar, and posts feed.
-class FeedScreen extends ConsumerWidget {
+/// Main Feed screen rendering the stories carousel, filters, post bar, and infinite scroll posts feed.
+class FeedScreen extends ConsumerStatefulWidget {
   const FeedScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final feedAsync = ref.watch(feedViewModelProvider);
-    final viewModel = ref.read(feedViewModelProvider.notifier);
+  ConsumerState<FeedScreen> createState() => _FeedScreenState();
+}
+
+class _FeedScreenState extends ConsumerState<FeedScreen> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 300) {
+      ref.read(feedProvider.notifier).loadMorePosts();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final feedAsync = ref.watch(feedProvider);
+    final viewModel = ref.read(feedProvider.notifier);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -36,7 +63,9 @@ class FeedScreen extends ConsumerWidget {
             Expanded(
               child: feedAsync.when(
                 loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppColors.primaryGreen),
+                  child: CircularProgressIndicator(
+                    color: AppColors.primaryGreen,
+                  ),
                 ),
                 error: (error, stack) => Center(
                   child: Padding(
@@ -44,7 +73,11 @@ class FeedScreen extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Failed to load feed: $error',
@@ -53,7 +86,7 @@ class FeedScreen extends ConsumerWidget {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () => viewModel.loadFeed(),
+                          onPressed: () => ref.invalidate(feedProvider),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryGreen,
                             foregroundColor: AppColors.surface,
@@ -66,8 +99,9 @@ class FeedScreen extends ConsumerWidget {
                 ),
                 data: (feedState) => RefreshIndicator(
                   color: AppColors.primaryGreen,
-                  onRefresh: () => viewModel.loadFeed(),
+                  onRefresh: () => ref.refresh(feedProvider.future),
                   child: CustomScrollView(
+                    controller: _scrollController,
                     physics: const AlwaysScrollableScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
@@ -78,12 +112,18 @@ class FeedScreen extends ConsumerWidget {
                           stories: feedState.stories,
                           onStoryTap: (story) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Viewing story of ${story.user.name}')),
+                              SnackBar(
+                                content: Text(
+                                  'Viewing story of ${story.user.name}',
+                                ),
+                              ),
                             );
                           },
                           onAddStoryTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Add to your story')),
+                              const SnackBar(
+                                content: Text('Add to your story'),
+                              ),
                             );
                           },
                         ),
@@ -93,11 +133,15 @@ class FeedScreen extends ConsumerWidget {
                       SliverToBoxAdapter(
                         child: Container(
                           color: AppColors.surface,
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 8,
+                          ),
                           alignment: Alignment.centerLeft,
                           child: FilterButton(
                             selectedFilter: feedState.selectedFilter,
-                            onFilterSelected: (filter) => viewModel.setFilter(filter),
+                            onFilterSelected: (filter) =>
+                                viewModel.setFilter(filter),
                           ),
                         ),
                       ),
@@ -108,17 +152,14 @@ class FeedScreen extends ConsumerWidget {
                           userAvatarUrl: feedState.stories.isNotEmpty
                               ? feedState.stories.first.user.avatarUrl
                               : '',
-                          onSubmitPost: ({
-                            required content,
-                            required category,
-                            tag,
-                          }) {
-                            viewModel.createPost(
-                              content: content,
-                              category: category,
-                              tag: tag,
-                            );
-                          },
+                          onSubmitPost:
+                              ({required content, required category, tag}) {
+                                viewModel.createPost(
+                                  content: content,
+                                  category: category,
+                                  tag: tag,
+                                );
+                              },
                         ),
                       ),
 
@@ -132,46 +173,73 @@ class FeedScreen extends ConsumerWidget {
 
                       // Feed Post Cards list separated by 2px feedBackground
                       SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final post = feedState.posts[index];
-                            return Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                PostCard(
-                                  post: post,
-                                  onLikeTap: () => viewModel.toggleLike(post.id),
-                                  onBookmarkTap: () => viewModel.toggleBookmark(post.id),
-                                  onCommentTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Comments for ${post.author.name}')),
-                                    );
-                                  },
-                                  onShareTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Post link copied to clipboard')),
-                                    );
-                                  },
-                                  onMoreTap: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('More options')),
-                                    );
-                                  },
-                                ),
-                                if (index < feedState.posts.length - 1)
-                                  const SizedBox(
-                                    height: 2,
-                                    child: ColoredBox(color: AppColors.feedBackground),
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final post = feedState.posts[index];
+                          return Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              PostCard(
+                                post: post,
+                                onLikeTap: () => viewModel.toggleLike(post.id),
+                                onBookmarkTap: () =>
+                                    viewModel.toggleBookmark(post.id),
+                                onCommentTap: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Comments for ${post.author.name}',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onShareTap: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Post link copied to clipboard',
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onMoreTap: () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('More options'),
+                                    ),
+                                  );
+                                },
+                              ),
+                              if (index < feedState.posts.length - 1)
+                                const SizedBox(
+                                  height: 2,
+                                  child: ColoredBox(
+                                    color: AppColors.feedBackground,
                                   ),
-                              ],
-                            );
-                          },
-                          childCount: feedState.posts.length,
+                                ),
+                            ],
+                          );
+                        }, childCount: feedState.posts.length),
+                      ),
+
+                      // Bottom loader when fetching next 10 posts
+                      if (feedState.isLoadingMore)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  color: AppColors.primaryGreen,
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      const SliverToBoxAdapter(
-                        child: SizedBox(height: 16),
-                      ),
+
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
                     ],
                   ),
                 ),

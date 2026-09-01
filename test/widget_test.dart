@@ -1,13 +1,18 @@
+import 'package:expert_listing/features/feed/viewmodel/feed_viewmodel.dart';
 import 'package:expert_listing/main.dart';
 import 'package:expert_listing/shared/widgets/custom_bottom_nav.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/test_mock_feed_service.dart';
 
 void main() {
   testWidgets('ExpertListingApp smoke test and stationary bottom navigation', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: ExpertListingApp(),
+      ProviderScope(
+        overrides: [
+          feedServiceProvider.overrideWithValue(TestMockFeedService()),
+        ],
+        child: const ExpertListingApp(),
       ),
     );
 

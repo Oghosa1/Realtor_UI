@@ -1,33 +1,40 @@
 import 'package:expert_listing/features/feed/viewmodel/feed_viewmodel.dart';
 import 'package:expert_listing/shared/models/post_model.dart';
 import 'package:expert_listing/shared/services/feed_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/test_mock_feed_service.dart';
 
 void main() {
-  group('FeedViewModel Tests', () {
-    late FeedService mockService;
-    late FeedViewModel viewModel;
+  group('FeedNotifier Tests', () {
+    late ProviderContainer container;
 
     setUp(() {
-      mockService = MockFeedService();
-      viewModel = FeedViewModel(mockService);
+      container = ProviderContainer(
+        overrides: [
+          feedServiceProvider.overrideWithValue(TestMockFeedService()),
+        ],
+      );
+    });
+
+    tearDown(() {
+      container.dispose();
     });
 
     test('Initial state loads stories and posts successfully', () async {
-      await viewModel.loadFeed();
-      final state = viewModel.state.value;
+      final state = await container.read(feedProvider.future);
 
       expect(state, isNotNull);
-      expect(state!.stories.isNotEmpty, isTrue);
+      expect(state.stories.isNotEmpty, isTrue);
       expect(state.posts.isNotEmpty, isTrue);
       expect(state.selectedFilter, equals('All'));
     });
 
     test('Filtering updates posts correctly', () async {
-      await viewModel.loadFeed();
-
-      await viewModel.setFilter('Requests');
-      final requestsState = viewModel.state.value;
+      await container.read(feedProvider.future);
+      
+      await container.read(feedProvider.notifier).setFilter('Requests');
+      final requestsState = container.read(feedProvider).value;
       expect(requestsState, isNotNull);
       expect(requestsState!.selectedFilter, equals('Requests'));
       expect(
@@ -35,8 +42,8 @@ void main() {
         isTrue,
       );
 
-      await viewModel.setFilter('Properties');
-      final propertiesState = viewModel.state.value;
+      await container.read(feedProvider.notifier).setFilter('Properties');
+      final propertiesState = container.read(feedProvider).value;
       expect(propertiesState, isNotNull);
       expect(propertiesState!.selectedFilter, equals('Properties'));
       expect(
@@ -45,30 +52,40 @@ void main() {
       );
     });
 
+    test('loadMorePosts requests next page and updates state', () async {
+      final initialState = await container.read(feedProvider.future);
+      final initialCount = initialState.posts.length;
+
+      await container.read(feedProvider.notifier).loadMorePosts();
+      final state = container.read(feedProvider).value!;
+      expect(state.posts.length, greaterThanOrEqualTo(initialCount));
+      expect(state.isLoadingMore, isFalse);
+    });
+
     test('Toggle like optimistically updates post like status and count', () async {
-      await viewModel.loadFeed();
-      final initialPost = viewModel.state.value!.posts.first;
+      final initialState = await container.read(feedProvider.future);
+      final initialPost = initialState.posts.first;
       final initialLikes = initialPost.likesCount;
       final initialIsLiked = initialPost.isLiked;
 
-      await viewModel.toggleLike(initialPost.id);
-      final updatedPost = viewModel.state.value!.posts.firstWhere((p) => p.id == initialPost.id);
+      await container.read(feedProvider.notifier).toggleLike(initialPost.id);
+      final updatedPost = container.read(feedProvider).value!.posts.firstWhere((p) => p.id == initialPost.id);
 
       expect(updatedPost.isLiked, equals(!initialIsLiked));
       expect(updatedPost.likesCount, equals(initialLikes + 1));
     });
 
     test('Create post adds a new post at the beginning of the feed', () async {
-      await viewModel.loadFeed();
-      final initialCount = viewModel.state.value!.posts.length;
+      final initialState = await container.read(feedProvider.future);
+      final initialCount = initialState.posts.length;
 
-      await viewModel.createPost(
+      await container.read(feedProvider.notifier).createPost(
         content: 'Test automated post creation',
         category: PostCategory.request,
         tag: PropertyTag.lookingToBuy,
       );
 
-      final state = viewModel.state.value!;
+      final state = container.read(feedProvider).value!;
       expect(state.posts.length, equals(initialCount + 1));
       expect(state.posts.first.content, equals('Test automated post creation'));
     });

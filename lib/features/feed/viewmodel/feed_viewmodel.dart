@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/post_model.dart';
 import '../../../shared/models/story_model.dart';
@@ -9,54 +10,60 @@ class FeedState {
     this.stories = const [],
     this.posts = const [],
     this.selectedFilter = 'All',
+    this.currentPage = 1,
+    this.hasMorePosts = true,
+    this.isLoadingMore = false,
   });
 
   final List<StoryModel> stories;
   final List<PostModel> posts;
   final String selectedFilter;
+  final int currentPage;
+  final bool hasMorePosts;
+  final bool isLoadingMore;
 
   FeedState copyWith({
     List<StoryModel>? stories,
     List<PostModel>? posts,
     String? selectedFilter,
+    int? currentPage,
+    bool? hasMorePosts,
+    bool? isLoadingMore,
   }) {
     return FeedState(
       stories: stories ?? this.stories,
       posts: posts ?? this.posts,
       selectedFilter: selectedFilter ?? this.selectedFilter,
+      currentPage: currentPage ?? this.currentPage,
+      hasMorePosts: hasMorePosts ?? this.hasMorePosts,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
     );
   }
 }
 
-/// Service provider for feed operations.
+/// Service provider for feed operations, utilizing FeedService for robust network requests.
 final feedServiceProvider = Provider<FeedService>((ref) {
-  return MockFeedService();
+  return FeedService();
 });
 
-/// ViewModel handling feed state, fetching, filtering, and engagement interactions.
-class FeedViewModel extends StateNotifier<AsyncValue<FeedState>> {
-  FeedViewModel(this._feedService) : super(const AsyncValue.loading()) {
-    loadFeed();
-  }
+/// Notifier handling feed state, fetching, filtering, and engagement interactions.
+class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
+  static const int _pageSize = 5;
 
-  final FeedService _feedService;
-
-  /// Loads stories and posts from the service.
-  Future<void> loadFeed() async {
-    state = const AsyncValue.loading();
-    try {
-      final stories = await _feedService.getStories();
-      final posts = await _feedService.getPosts();
-      state = AsyncValue.data(
-        FeedState(
-          stories: stories,
-          posts: posts,
-          selectedFilter: 'All',
-        ),
-      );
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+  @override
+  FutureOr<FeedState> build() async {
+    final service = ref.watch(feedServiceProvider);
+    final stories = await service.getStories();
+    final posts = await service.getPosts(limit: _pageSize, page: 1);
+    
+    return FeedState(
+      stories: stories,
+      posts: posts,
+      selectedFilter: 'All',
+      currentPage: 1,
+      hasMorePosts: posts.length >= _pageSize,
+      isLoadingMore: false,
+    );
   }
 
   /// Sets the active filter and queries posts accordingly.
@@ -64,16 +71,57 @@ class FeedViewModel extends StateNotifier<AsyncValue<FeedState>> {
     final current = state.value;
     if (current == null) return;
 
+    state = const AsyncValue.loading();
     try {
-      final posts = await _feedService.getPosts(filter: filter);
+      final service = ref.read(feedServiceProvider);
+      final posts = await service.getPosts(
+        filter: filter,
+        limit: _pageSize,
+        page: 1,
+      );
       state = AsyncValue.data(
         current.copyWith(
           posts: posts,
           selectedFilter: filter,
+          currentPage: 1,
+          hasMorePosts: posts.length >= _pageSize,
+          isLoadingMore: false,
         ),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Fetches the next page of posts and appends them to the feed.
+  Future<void> loadMorePosts() async {
+    final current = state.value;
+    if (current == null || current.isLoadingMore || !current.hasMorePosts) {
+      return;
+    }
+
+    state = AsyncValue.data(current.copyWith(isLoadingMore: true));
+
+    try {
+      final service = ref.read(feedServiceProvider);
+      final nextPage = current.currentPage + 1;
+      final newPosts = await service.getPosts(
+        filter: current.selectedFilter,
+        limit: _pageSize,
+        page: nextPage,
+      );
+
+      state = AsyncValue.data(
+        current.copyWith(
+          posts: [...current.posts, ...newPosts],
+          currentPage: nextPage,
+          hasMorePosts: newPosts.length >= _pageSize,
+          isLoadingMore: false,
+        ),
+      );
+    } catch (e) {
+      // Revert loading indicator on error
+      state = AsyncValue.data(current.copyWith(isLoadingMore: false));
     }
   }
 
@@ -97,7 +145,8 @@ class FeedViewModel extends StateNotifier<AsyncValue<FeedState>> {
     state = AsyncValue.data(current.copyWith(posts: updatedPosts));
 
     try {
-      await _feedService.toggleLike(postId);
+      final service = ref.read(feedServiceProvider);
+      await service.toggleLike(postId);
     } catch (e) {
       // Revert if failed
       state = AsyncValue.data(current);
@@ -124,7 +173,8 @@ class FeedViewModel extends StateNotifier<AsyncValue<FeedState>> {
     state = AsyncValue.data(current.copyWith(posts: updatedPosts));
 
     try {
-      await _feedService.toggleBookmark(postId);
+      final service = ref.read(feedServiceProvider);
+      await service.toggleBookmark(postId);
     } catch (e) {
       state = AsyncValue.data(current);
     }
@@ -142,7 +192,8 @@ class FeedViewModel extends StateNotifier<AsyncValue<FeedState>> {
     if (current == null) return;
 
     try {
-      final newPost = await _feedService.createPost(
+      final service = ref.read(feedServiceProvider);
+      final newPost = await service.createPost(
         content: content,
         category: category,
         tag: tag,
@@ -159,8 +210,4 @@ class FeedViewModel extends StateNotifier<AsyncValue<FeedState>> {
 }
 
 /// Feature-specific provider co-located with ViewModel as per rules.md.
-final feedViewModelProvider =
-    StateNotifierProvider<FeedViewModel, AsyncValue<FeedState>>((ref) {
-  final service = ref.watch(feedServiceProvider);
-  return FeedViewModel(service);
-});
+final feedProvider = AutoDisposeAsyncNotifierProvider<FeedNotifier, FeedState>(FeedNotifier.new);

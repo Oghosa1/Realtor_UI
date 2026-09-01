@@ -11,7 +11,9 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
-*.md
+flutterrules.md
+nodejsrules.md
+!README.md
 
 # IntelliJ related
 *.iml

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
+import '../viewmodel/listing_viewmodel.dart';
 
 /// Screen for creating a new property listing.
-class CreateListingScreen extends StatelessWidget {
+class CreateListingScreen extends ConsumerWidget {
   const CreateListingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final listingState = ref.watch(listingProvider);
+    
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -21,17 +25,17 @@ class CreateListingScreen extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: const SafeArea(
+      body: SafeArea(
         bottom: false,
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.add_business_rounded, size: 64, color: AppColors.primaryGreen),
-              SizedBox(height: 12),
+              const Icon(Icons.add_business_rounded, size: 64, color: AppColors.primaryGreen),
+              const SizedBox(height: 12),
               Text(
-                'Post a new Property for Sale or Rent',
-                style: TextStyle(color: AppColors.bodyText, fontSize: 16),
+                listingState.isSubmitting ? 'Creating listing...' : 'Post a new Property for Sale or Rent',
+                style: const TextStyle(color: AppColors.bodyText, fontSize: 16),
               ),
             ],
           ),
