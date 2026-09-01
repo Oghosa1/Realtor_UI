@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'shimmer_skeleton.dart';
 import '../../core/theme.dart';
 
 /// Customizable circular avatar widget matching Figma specs.
@@ -35,20 +36,10 @@ class CustomAvatar extends StatelessWidget {
               width: size,
               height: size,
               fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
+              placeholder: (context, url) => ShimmerSkeleton(
                 width: size,
                 height: size,
-                color: const Color(0xFFD0CBDD),
-                child: Center(
-                  child: Text(
-                    name?.isNotEmpty == true ? name![0].toUpperCase() : '',
-                    style: TextStyle(
-                      fontSize: size * 0.4,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.bodyText,
-                    ),
-                  ),
-                ),
+                borderRadius: BorderRadius.circular(size),
               ),
               errorWidget: (context, url, error) => Container(
                 width: size,

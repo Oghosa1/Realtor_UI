@@ -4,6 +4,7 @@ import '../../../core/theme.dart';
 import '../../../shared/models/post_model.dart';
 import '../../../shared/widgets/custom_avatar.dart';
 import '../../../shared/widgets/overlapping_avatars.dart';
+import '../../../shared/widgets/shimmer_skeleton.dart';
 import '../../../shared/widgets/tag_badge.dart';
 import 'post_action_bar.dart';
 
@@ -243,15 +244,9 @@ class PostCard extends StatelessWidget {
             width: double.infinity,
             height: post.isVideo ? 380 : 240,
             fit: BoxFit.cover,
-            placeholder: (context, url) => Container(
+            placeholder: (context, url) => ShimmerSkeleton(
               height: post.isVideo ? 380 : 240,
-              color: AppColors.feedBackground,
-              child: const Center(
-                child: CircularProgressIndicator(
-                  color: AppColors.primaryGreen,
-                  strokeWidth: 2,
-                ),
-              ),
+              width: double.infinity,
             ),
             errorWidget: (context, url, error) => Container(
               height: 200,
