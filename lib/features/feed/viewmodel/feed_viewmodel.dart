@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/post_model.dart';
 import '../../../shared/models/story_model.dart';
+import '../../../shared/models/user_model.dart';
 import '../../../shared/services/feed_service.dart';
 
 /// State representation for the feed screen.
@@ -134,9 +136,21 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     final updatedPosts = current.posts.map((p) {
       if (p.id == postId) {
         final newIsLiked = !p.isLiked;
+        
+        // Optimistically update the "liked by" list
+        final newLikedBy = List<UserModel>.from(p.likedBy);
+        if (newIsLiked) {
+          // Insert a placeholder "You" user at the front
+          newLikedBy.insert(0, const UserModel(id: 'current_user', name: 'You', avatarUrl: ''));
+        } else {
+          // Remove the placeholder
+          newLikedBy.removeWhere((u) => u.id == 'current_user');
+        }
+
         return p.copyWith(
           isLiked: newIsLiked,
           likesCount: newIsLiked ? p.likesCount + 1 : (p.likesCount > 0 ? p.likesCount - 1 : 0),
+          likedBy: newLikedBy,
         );
       }
       return p;
@@ -186,26 +200,41 @@ class FeedNotifier extends AutoDisposeAsyncNotifier<FeedState> {
     required PostCategory category,
     PropertyTag? tag,
     String? location,
-    String? mediaUrl,
+    File? image,
   }) async {
     final current = state.value;
     if (current == null) return;
 
-    try {
-      final service = ref.read(feedServiceProvider);
-      final newPost = await service.createPost(
-        content: content,
-        category: category,
-        tag: tag,
-        location: location,
-        mediaUrl: mediaUrl,
-      );
-      state = AsyncValue.data(
-        current.copyWith(posts: [newPost, ...current.posts]),
-      );
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
+    final service = ref.read(feedServiceProvider);
+    final newPost = await service.createPost(
+      content: content,
+      category: category,
+      tag: tag,
+      location: location,
+      image: image,
+    );
+    
+    state = AsyncValue.data(
+      current.copyWith(posts: [newPost, ...current.posts]),
+    );
+  }
+
+  /// Increments the comment count for a given post locally.
+  void incrementCommentCount(String postId) {
+    final current = state.value;
+    if (current == null) return;
+
+    final updatedPosts = current.posts.map((p) {
+      if (p.id == postId) {
+        return p.copyWith(
+          commentsCount: p.commentsCount + 1,
+          totalCommentsCount: (p.totalCommentsCount ?? 0) + 1,
+        );
+      }
+      return p;
+    }).toList();
+
+    state = AsyncValue.data(current.copyWith(posts: updatedPosts));
   }
 }
 

@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme.dart';
 import '../viewmodel/feed_viewmodel.dart';
+import '../widgets/comments_bottom_sheet.dart';
 import '../widgets/create_post_bar.dart';
 import '../widgets/feed_header.dart';
 import '../widgets/filter_button.dart';
 import '../widgets/post_card.dart';
 import '../widgets/stories_carousel.dart';
+import 'package:share_plus/share_plus.dart';
 
 /// Main Feed screen rendering the stories carousel, filters, post bar, and infinite scroll posts feed.
 class FeedScreen extends ConsumerStatefulWidget {
@@ -153,11 +155,13 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                               ? feedState.stories.first.user.avatarUrl
                               : '',
                           onSubmitPost:
-                              ({required content, required category, tag}) {
-                                viewModel.createPost(
+                              ({required content, required category, tag, location, image}) async {
+                                await viewModel.createPost(
                                   content: content,
                                   category: category,
                                   tag: tag,
+                                  location: location,
+                                  image: image,
                                 );
                               },
                         ),
@@ -184,22 +188,15 @@ class _FeedScreenState extends ConsumerState<FeedScreen> {
                                 onBookmarkTap: () =>
                                     viewModel.toggleBookmark(post.id),
                                 onCommentTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Comments for ${post.author.name}',
-                                      ),
-                                    ),
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => CommentsBottomSheet(postId: post.id),
                                   );
                                 },
                                 onShareTap: () {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                        'Post link copied to clipboard',
-                                      ),
-                                    ),
-                                  );
+                                  Share.share('Check out this post: ${post.content}');
                                 },
                                 onMoreTap: () {
                                   ScaffoldMessenger.of(context).showSnackBar(

@@ -13,7 +13,7 @@ class TagBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (backgroundColor, foregroundColor, iconData) = _getTagStyle(tag);
+    final (backgroundColor, foregroundColor) = _getTagStyle(tag);
 
     return Container(
       height: 24,
@@ -30,11 +30,7 @@ class TagBadge extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(
-            iconData,
-            size: 12,
-            color: foregroundColor,
-          ),
+          _buildIcon(tag, foregroundColor),
           const SizedBox(width: 4),
           Text(
             tag.label,
@@ -50,32 +46,34 @@ class TagBadge extends StatelessWidget {
     );
   }
 
-  (Color, Color, IconData) _getTagStyle(PropertyTag tag) {
+  Widget _buildIcon(PropertyTag tag, Color foregroundColor) {
     switch (tag) {
       case PropertyTag.lookingToBuy:
-        return (
-          AppColors.tagBuyBackground,
-          AppColors.tagBuyForeground,
-          Icons.sell_outlined,
+        return Image.asset(
+          'assets/images/looking_to_buy.png',
+          width: 12,
+          height: 12,
+          color: foregroundColor,
         );
       case PropertyTag.lookingToRent:
-        return (
-          AppColors.tagRentBackground,
-          AppColors.tagRentForeground,
-          Icons.vpn_key_outlined,
-        );
+        return Icon(Icons.vpn_key_outlined, size: 12, color: foregroundColor);
       case PropertyTag.forRent:
-        return (
-          AppColors.tagForRentBackground,
-          AppColors.tagForRentForeground,
-          Icons.vpn_key_outlined,
-        );
+        return Icon(Icons.vpn_key_outlined, size: 12, color: foregroundColor);
       case PropertyTag.forSale:
-        return (
-          AppColors.tagForSaleBackground,
-          AppColors.tagForSaleForeground,
-          Icons.sell_outlined,
-        );
+        return Icon(Icons.sell_outlined, size: 12, color: foregroundColor);
+    }
+  }
+
+  (Color, Color) _getTagStyle(PropertyTag tag) {
+    switch (tag) {
+      case PropertyTag.lookingToBuy:
+        return (AppColors.tagBuyBackground, AppColors.tagBuyForeground);
+      case PropertyTag.lookingToRent:
+        return (AppColors.tagRentBackground, AppColors.tagRentForeground);
+      case PropertyTag.forRent:
+        return (AppColors.tagForRentBackground, AppColors.tagForRentForeground);
+      case PropertyTag.forSale:
+        return (AppColors.tagForSaleBackground, AppColors.tagForSaleForeground);
     }
   }
 }

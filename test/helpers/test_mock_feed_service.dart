@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:expert_listing/shared/models/post_model.dart';
 import 'package:expert_listing/shared/models/story_model.dart';
 import 'package:expert_listing/shared/models/user_model.dart';
@@ -93,7 +94,7 @@ class TestMockFeedService implements FeedService {
     required PostCategory category,
     PropertyTag? tag,
     String? location,
-    String? mediaUrl,
+    File? image,
   }) async {
     final newPost = PostModel(
       id: 'post_${DateTime.now().millisecondsSinceEpoch}',

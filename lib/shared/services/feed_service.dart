@@ -1,3 +1,5 @@
+import 'dart:developer';
+import 'dart:io';
 import 'package:dio/dio.dart';
 import '../../core/constants.dart';
 import '../../core/inspector.dart';
@@ -16,8 +18,8 @@ class FeedService {
         Dio(
           BaseOptions(
             baseUrl: baseUrl ?? AppConstants.apiBaseUrl,
-            connectTimeout: const Duration(seconds: 5),
-            receiveTimeout: const Duration(seconds: 5),
+            connectTimeout: const Duration(seconds: 60),
+            receiveTimeout: const Duration(seconds: 60),
             headers: {
               'Content-Type': 'application/json',
               'Accept': 'application/json',
@@ -139,35 +141,62 @@ class FeedService {
     required PostCategory category,
     PropertyTag? tag,
     String? location,
-    String? mediaUrl,
+    File? image,
   }) async {
-    final payload = {
-      'content': content,
-      'category': category.name,
-      'tag': tag?.label,
-      'location': location ?? 'Lekki Phase 1, Lagos',
-      'mediaUrl': mediaUrl,
-      'isVideo': false,
-    };
+    try {
+      log('Preparing to create post...');
+      final formData = FormData.fromMap({
+        'content': content,
+        'category': category.name,
+        if (tag != null) 'transactionType': tag.label,
+        if (location != null && location.isNotEmpty) 'location': location,
+        'isVideo': false,
+        if (image != null)
+          'image': await MultipartFile.fromFile(image.path),
+      });
 
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/posts',
-      data: payload,
-    );
+      log('Sending POST request to /posts with fields: ${formData.fields} and files: ${formData.files.map((f) => f.key).toList()}');
 
-    if ((response.statusCode == 201 || response.statusCode == 200) &&
-        response.data != null) {
-      final jsonBody = response.data!;
-      if (jsonBody['success'] == true && jsonBody['data'] != null) {
-        return PostModel.fromJson(jsonBody['data'] as Map<String, dynamic>);
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/posts',
+        data: formData,
+      );
+
+      log('Received response with status: ${response.statusCode}');
+
+      if ((response.statusCode == 201 || response.statusCode == 200) &&
+          response.data != null) {
+        final jsonBody = response.data!;
+        if (jsonBody['success'] == true && jsonBody['data'] != null) {
+          log('Post created successfully!');
+          return PostModel.fromJson(jsonBody['data'] as Map<String, dynamic>);
+        } else {
+          log('Post creation failed due to unexpected format: ${jsonBody['error']}');
+          throw Exception(jsonBody['error'] ?? 'Unexpected response format');
+        }
       }
-    }
 
-    throw DioException(
-      requestOptions: response.requestOptions,
-      response: response,
-      error: 'Failed to create post on backend: ${response.statusCode}',
-    );
+      log('Post creation failed: HTTP ${response.statusCode}');
+      throw Exception('Failed to create post. Please try again.');
+    } on DioException catch (e) {
+      log('DioException during post creation: ${e.type} - ${e.message}');
+      if (e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Connection timed out. Please check your internet connection.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception('No internet connection. Please try again.');
+      } else if (e.response != null) {
+         log('Error response data: ${e.response?.data}');
+         final data = e.response?.data;
+         if (data is Map && data['error'] != null) {
+            throw Exception(data['error']);
+         }
+         throw Exception('Server error: ${e.response?.statusCode}');
+      }
+      throw Exception('An unexpected error occurred during upload.');
+    } catch (e) {
+      log('Unknown exception during post creation: $e');
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
   }
 
   Future<List<CommentModel>> getComments(String postId) async {
