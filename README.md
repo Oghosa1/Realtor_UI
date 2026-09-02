@@ -123,7 +123,6 @@ The implementation was intentionally kept strictly within the scope of the provi
 - **Network Client**: Chose `Dio` over `http` for its built-in support for interceptors, timeout configurations, and simplified `FormData` creation for image uploads.
 
 ## 19. Assessment Submission
-- **GitHub Repository**: [Insert Link]
-- **Live Backend**: [Insert Link]
-- **Mobile Build**: [Insert Link]
-- **Demo Video**: [Insert Link]
+- **Backend Repository**: https://github.com/Oghosa1/realtor-backend
+- **Live Backend**: https://realtor-backend-service.onrender.com/health
+- **Mobile Build**: https://drive.google.com/file/d/1UBuwp8cdKY6F9_uyLMqqWqbf3J2L3Typ/view?usp=drivesdk
