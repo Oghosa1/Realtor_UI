@@ -111,16 +111,19 @@ class CustomBottomNav extends StatelessWidget {
               color: itemColor,
             ),
             const SizedBox(height: 11),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: itemColor,
-                    fontSize: 14,
-                    height: 1.2,
-                    fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                  ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: itemColor,
+                      fontSize: 14,
+                      height: 1.2,
+                      fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                    ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+              ),
             ),
           ],
         ),
